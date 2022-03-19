@@ -1,0 +1,9 @@
+#!/bin/bash
+set -x
+max_id=$(qm list |grep -v VMID | awk '{print $1}' |sort | tail -n 1)
+new_id=$(($max_id+1))
+
+lvcreate -s --thinpool proxmox_storage --name vm-${new_id}-disk-1 /dev/vgproxmox/vm-100-disk-0
+lvchange -ay -K /dev/vgproxmox/vm-${new_id}-disk-1
+
+qm create ${new_id} --name Windows_clone -autostart -cores 4 -machine pc-i440fx-5.2 -memory 8192 -ostype win10 -scsihw virtio-scsi-pci -sockets 2 -ide0 file=/dev/vgproxmox/vm-${new_id}-disk-1,media=disk,size=500G -net0 model=virtio,bridge=vmbr0,link_down=1

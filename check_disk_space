@@ -1,0 +1,17 @@
+#!/bin/bash
+script_name=$( basename $0);
+
+/usr/sbin/lvdisplay -v /dev/vgproxmox/proxmox_storage |egrep 'Allocated\ pool\ data|Allocated\ metadata' | awk '{print $(NF-1) " " $NF}' | while read name data; do 
+  percent=$(echo $data | cut -d '.' -f1);
+  if [ "$percent" -le "90" ]; then
+    /usr/bin/logger "${script_name}: ${name} $percent is less then 90";
+  else
+    /usr/bin/logger "${script_name}: ${name} ${percent} is more then 90 have to turn off vm";
+    Windows_id=$(/usr/sbin/qm list  |awk '/Windows_clone/{ print $1}');
+    /usr/sbin/qm stop $Windows_id;
+    if [ "$percent" -qt "95" ]; then
+      /usr/bin/logger "${script_name}: vm should be removed";
+#   /usr/sbin/qm destroy $Windows_id;
+    fi
+  fi
+done
