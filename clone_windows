@@ -1,9 +1,26 @@
 #!/bin/bash
-set -x
+#set -e
+###set -x
+if [  -e /usr/local/bin/.windows_id ];then
+
+  old_vm_id=$(</usr/local/bin/.windows_id);
+  vm=$(/usr/sbin/qm list | grep $old_vm_id -c);
+  if [ "$vm" -eq "1" ]; then
+
+    echo "klon już istnieje usun go";
+
+    exit 0;
+  fi
+
+fi
 max_id=$(qm list |grep -v VMID | awk '{print $1}' |sort | tail -n 1)
 new_id=$(($max_id+1))
 
-lvcreate -s --thinpool proxmox_storage --name vm-${new_id}-disk-1 /dev/vgproxmox/vm-100-disk-0
-lvchange -ay -K /dev/vgproxmox/vm-${new_id}-disk-1
+echo $new_id > /usr/local/bin/.windows_id
 
-qm create ${new_id} --name Windows_clone -autostart -cores 4 -machine pc-i440fx-5.2 -memory 8192 -ostype win10 -scsihw virtio-scsi-pci -sockets 2 -ide0 file=/dev/vgproxmox/vm-${new_id}-disk-1,media=disk,size=500G -net0 model=virtio,bridge=vmbr0,link_down=1
+lvcreate -s --thinpool proxmox_storage --name vm-${new_id}-disk-1 /dev/vgproxmox/vm-100-disk-0 >> /dev/null 2>&1 
+lvchange -ay -K /dev/vgproxmox/vm-${new_id}-disk-1 >> /dev/null 2>&1 
+
+qm create ${new_id} --name Windows-clone -autostart -cores 4 -machine pc-i440fx-5.2 -memory 8192 -ostype win10 -scsihw virtio-scsi-pci -sockets 2 -ide0 file=/dev/vgproxmox/vm-${new_id}-disk-1,media=disk,size=500G -net0 model=virtio,bridge=vmbr0,link_down=1
+
+echo "Klon jest gotowy do dzialania"
